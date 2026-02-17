@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>4 Lists App</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+
+      background-image: url("bg.jpg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.55);
+      z-index: -1;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 40px auto;
+      background: rgba(255, 255, 255, 0.92);
+      padding: 22px;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      backdrop-filter: blur(4px);
+    }
+
+    h1 {
+      margin: 0 0 20px;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .card {
+      border: 1px solid #eee;
+      border-radius: 14px;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.95);
+      min-height: 140px;
+      cursor: pointer;
+      transition: 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+    }
+
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .card p, .card ul {
+      position: relative;
+      z-index: 2;
+    }
+
+    .card-bg {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      opacity: 0.35;
+      z-index: 1;
+    }
+
+    .small-list {
+      margin: 0;
+      padding-left: 18px;
+      color: #444;
+      font-size: 14px;
+    }
+
+    .bottom-bar {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 12px 16px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 15px;
+      background: #4a78ff;
+      color: white;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: #365ee0;
+    }
+
+    .btn-secondary {
+      background: #222;
+    }
+
+    .btn-secondary:hover {
+      background: #000;
+    }
+
+    .btn-danger {
+      background: #ff3b3b;
+    }
+
+    .btn-danger:hover {
+      background: #d92c2c;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .screen-title {
+      text-align: center;
+      margin: 0 0 16px;
+      font-size: 22px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    input {
+      flex: 1;
+      min-width: 200px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      outline: none;
+      font-size: 15px;
+    }
+
+    input:focus {
+      border-color: #4a78ff;
+    }
+
+    ul.main-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    ul.main-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid #eee;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      background: rgba(255, 255, 255, 0.95);
+    }
+
+    .delete-btn {
+      background: #ff3b3b;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .delete-btn:hover {
+      background: #d92c2c;
+    }
+
+    .hint {
+      font-size: 13px;
+      color: #444;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    /* LIST SCREEN BACKGROUND */
+    .list-screen {
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      position: relative;
+    }
+
+    .list-screen::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.72);
+      border-radius: 14px;
+      z-index: 0;
+    }
+
+    .list-screen > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    @media (max-width: 620px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- HOME SCREEN -->
+  <div class="container" id="homeScreen">
+    <h1>LetsWatch</h1>
+
+    <div class="hint">👇 Click any specific list to watch all the names</div>
+
+    <div class="grid" id="homeGrid"></div>
+
+    <div class="bottom-bar">
+      <button onclick="openEditMenu()">Edit</button>
+    </div>
+
+    <div class="hint">🔒 Password is only required for Edit</div>
+    <div class="hint"> Everythingh is created by the one and only 'Aakash'</div>
+  </div>
+
+  <!-- EDIT SCREEN -->
+  <div class="container hidden list-screen" id="editScreen">
+    <h2 class="screen-title" id="editTitle">Editing</h2>
+
+    <div class="input-row">
+      <input id="editItemInput" type="text" placeholder="Add item..." />
+      <button onclick="addItem()">Add</button>
+    </div>
+
+    <ul class="main-list" id="editList"></ul>
+
+    <div class="bottom-bar">
+      <button onclick="chooseBackgroundFromGallery()">Choose Background</button>
+      <button class="btn-danger" onclick="removeListBackground()">Remove Background</button>
+      <button class="btn-secondary" onclick="goHome()">⬅ Back</button>
+    </div>
+
+    <div class="hint">Press Enter to add item quickly</div>
+  </div>
+
+  <!-- VIEW SCREEN -->
+  <div class="container hidden list-screen" id="viewScreen">
+    <h2 class="screen-title" id="viewTitle">Viewing</h2>
+
+    <ul class="main-list" id="viewList"></ul>
+
+    <div class="bottom-bar">
+      <button class="btn-secondary" onclick="goHome()">⬅ Back</button>
+    </div>
+
+    <div class="hint">👀 View only mode</div>
+  </div>
+
+  <!-- Hidden file input for gallery -->
+  <input id="bgFileInput" type="file" accept="image/*" class="hidden" />
+
+  <script>
+    // ==========================
+    // LIST NAMES
+    // ==========================
+    const listKeys = ["x1", "x2", "x3", "x4"];
+
+    const listDisplayNames = {
+      x1: "Buggy",
+      x2: "Zainab",
+      x3: "Parth",
+      x4: "Aakash"
+    };
+
+    // ==========================
+    // DEFAULT ITEMS
+    // ==========================
+    const defaultData = {
+      x1: [],
+      x2: [],
+      x3: [],
+      x4: []
+    };
+
+    // ==========================
+    // LOCAL STORAGE (lists + passwords)
+    // ==========================
+    let lists = JSON.parse(localStorage.getItem("fourListsData"));
+    if (!lists) {
+      lists = defaultData;
+      saveAll();
+    }
+
+    let passwords = JSON.parse(localStorage.getItem("fourListsPasswords"));
+    if (!passwords) {
+      passwords = {};
+      savePasswords();
+    }
+
+    function saveAll() {
+      localStorage.setItem("fourListsData", JSON.stringify(lists));
+    }
+
+    function savePasswords() {
+      localStorage.setItem("fourListsPasswords", JSON.stringify(passwords));
+    }
+
+    // ==========================
+    // INDEXED DB (background images)
+    // ==========================
+    const DB_NAME = "FourListsDB";
+    const DB_VERSION = 1;
+    const STORE_NAME = "backgrounds";
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = function(event) {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME);
+          }
+        };
+
+        request.onsuccess = function() {
+          resolve(request.result);
+        };
+
+        request.onerror = function() {
+          reject("IndexedDB error");
+        };
+      });
+    }
+
+    async function setBackgroundBlob(listKey, blob) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+
+        const req = store.put(blob, listKey);
+
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject("Failed saving background");
+      });
+    }
+
+    async function getBackgroundBlob(listKey) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+
+        const req = store.get(listKey);
+
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject("Failed reading background");
+      });
+    }
+
+    async function removeBackgroundBlob(listKey) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+
+        const req = store.delete(listKey);
+
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject("Failed deleting background");
+      });
+    }
+
+    function blobToURL(blob) {
+      return URL.createObjectURL(blob);
+    }
+
+    // ==========================
+    // APP STATE
+    // ==========================
+    let currentListKey = null;
+    let currentBgObjectURL = null;
+
+    function hideAllScreens() {
+      document.getElementById("homeScreen").classList.add("hidden");
+      document.getElementById("editScreen").classList.add("hidden");
+      document.getElementById("viewScreen").classList.add("hidden");
+    }
+
+    async function applyListScreenBackground(key) {
+      // Cleanup old object URL
+      if (currentBgObjectURL) {
+        URL.revokeObjectURL(currentBgObjectURL);
+        currentBgObjectURL = null;
+      }
+
+      const blob = await getBackgroundBlob(key);
+
+      const viewScreen = document.getElementById("viewScreen");
+      const editScreen = document.getElementById("editScreen");
+
+      if (blob) {
+        currentBgObjectURL = blobToURL(blob);
+        viewScreen.style.backgroundImage = `url('${currentBgObjectURL}')`;
+        editScreen.style.backgroundImage = `url('${currentBgObjectURL}')`;
+      } else {
+        viewScreen.style.backgroundImage = "";
+        editScreen.style.backgroundImage = "";
+      }
+    }
+
+    // ==========================
+    // HOME RENDER
+    // ==========================
+    async function renderHome() {
+      const grid = document.getElementById("homeGrid");
+      grid.innerHTML = "";
+
+      for (const key of listKeys) {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.onclick = () => openView(key);
+
+        const items = lists[key] || [];
+        const preview = items.slice(0, 5);
+
+        const passStatus = passwords[key] ? "🔒 Edit password set" : "🔓 No edit password yet";
+
+        // Card background preview (from IndexedDB)
+        let bgBlob = null;
+        try {
+          bgBlob = await getBackgroundBlob(key);
+        } catch (e) {}
+
+        let bgURL = null;
+        if (bgBlob) bgURL = blobToURL(bgBlob);
+
+        card.innerHTML = `
+          ${bgURL ? `<div class="card-bg" style="background-image:url('${bgURL}')"></div>` : ""}
+
+          <h2>${listDisplayNames[key]}</h2>
+          <p style="margin:0 0 10px;color:#777;font-size:13px;">${passStatus}</p>
+
+          ${
+            items.length === 0
+              ? `<p style="color:#777;font-size:14px;margin:0;">(empty)</p>`
+              : `<ul class="small-list">
+                  ${preview.map(i => `<li>${i}</li>`).join("")}
+                </ul>
+                ${items.length > 5 ? `<p style="margin:8px 0 0;color:#777;font-size:13px;">+ more...</p>` : ""}
+               `
+          }
+        `;
+
+        grid.appendChild(card);
+
+        // cleanup card URL to avoid memory leak
+        if (bgURL) {
+          setTimeout(() => URL.revokeObjectURL(bgURL), 1000);
+        }
+      }
+    }
+
+    // ==========================
+    // EDIT MENU
+    // ==========================
+    function openEditMenu() {
+      let name = prompt("Which list to edit?\nBuggy, Zainab, Parth, Aakash");
+      if (!name) return;
+
+      name = name.trim().toLowerCase();
+
+      const key = getKeyFromName(name);
+      if (!key) {
+        alert("Invalid name! Type: Buggy, Zainab, Parth, or Aakash");
+        return;
+      }
+
+      handlePasswordThenOpenEdit(key);
+    }
+
+    function getKeyFromName(nameLower) {
+      for (const key of listKeys) {
+        if (listDisplayNames[key].toLowerCase() === nameLower) return key;
+      }
+      return null;
+    }
+
+    // ==========================
+    // PASSWORD ONLY FOR EDIT
+    // ==========================
+    function handlePasswordThenOpenEdit(key) {
+      if (!passwords[key]) {
+        let newPass = prompt("First time editing " + listDisplayNames[key] + ".\nSet a password:");
+        if (!newPass) return;
+
+        newPass = newPass.trim();
+        if (newPass === "") return;
+
+        passwords[key] = newPass;
+        savePasswords();
+
+        alert("Password set successfully for " + listDisplayNames[key] + " ✅");
+        openEdit(key);
+        return;
+      }
+
+      let entered = prompt("Enter password to edit " + listDisplayNames[key] + ":");
+      if (!entered) return;
+
+      entered = entered.trim();
+
+      if (entered !== passwords[key]) {
+        alert("Wrong password ❌");
+        return;
+      }
+
+      openEdit(key);
+    }
+
+    // ==========================
+    // OPEN SCREENS
+    // ==========================
+    async function openEdit(key) {
+      currentListKey = key;
+      hideAllScreens();
+      document.getElementById("editScreen").classList.remove("hidden");
+
+      await applyListScreenBackground(key);
+
+      document.getElementById("editTitle").innerText = "Editing " + listDisplayNames[key];
+      renderEdit();
+
+      document.getElementById("editItemInput").focus();
+    }
+
+    async function openView(key) {
+      currentListKey = key;
+      hideAllScreens();
+      document.getElementById("viewScreen").classList.remove("hidden");
+
+      await applyListScreenBackground(key);
+
+      document.getElementById("viewTitle").innerText = "Viewing " + listDisplayNames[key];
+      renderView();
+    }
+
+    // ==========================
+    // LIST RENDER
+    // ==========================
+    function renderEdit() {
+      const ul = document.getElementById("editList");
+      ul.innerHTML = "";
+
+      const items = lists[currentListKey] || [];
+
+      items.forEach((item, index) => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <span>${item}</span>
+          <button class="delete-btn" onclick="deleteItem(${index})">Delete</button>
+        `;
+        ul.appendChild(li);
+      });
+    }
+
+    function renderView() {
+      const ul = document.getElementById("viewList");
+      ul.innerHTML = "";
+
+      const items = lists[currentListKey] || [];
+
+      if (items.length === 0) {
+        ul.innerHTML = `<li><span style="color:#777;">(empty)</span></li>`;
+        return;
+      }
+
+      items.forEach(item => {
+        const li = document.createElement("li");
+        li.innerHTML = `<span>${item}</span>`;
+        ul.appendChild(li);
+      });
+    }
+
+    // ==========================
+    // ADD / DELETE
+    // ==========================
+    function addItem() {
+      const input = document.getElementById("editItemInput");
+      const value = input.value.trim();
+      if (value === "") return;
+
+      if (!lists[currentListKey]) lists[currentListKey] = [];
+      lists[currentListKey].push(value);
+      saveAll();
+
+      input.value = "";
+      input.focus();
+      renderEdit();
+    }
+
+    function deleteItem(index) {
+      lists[currentListKey].splice(index, 1);
+      saveAll();
+      renderEdit();
+    }
+
+    // ==========================
+    // BACKGROUND: GALLERY PICKER
+    // ==========================
+    function chooseBackgroundFromGallery() {
+      const fileInput = document.getElementById("bgFileInput");
+      fileInput.value = "";
+      fileInput.click();
+    }
+
+    document.getElementById("bgFileInput").addEventListener("change", async function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        alert("Please select an image file.");
+        return;
+      }
+
+      try {
+        await setBackgroundBlob(currentListKey, file);
+        await applyListScreenBackground(currentListKey);
+        await renderHome();
+        alert("Background updated ✅");
+      } catch (err) {
+        alert("Failed to save background ❌");
+      }
+    });
+
+    async function removeListBackground() {
+      if (!confirm("Remove background for " + listDisplayNames[currentListKey] + "?")) return;
+
+      try {
+        await removeBackgroundBlob(currentListKey);
+        await applyListScreenBackground(currentListKey);
+        await renderHome();
+        alert("Background removed ✅");
+      } catch (err) {
+        alert("Failed to remove background ❌");
+      }
+    }
+
+    // ==========================
+    // HOME
+    // ==========================
+    async function goHome() {
+      currentListKey = null;
+
+      // cleanup background URL
+      if (currentBgObjectURL) {
+        URL.revokeObjectURL(currentBgObjectURL);
+        currentBgObjectURL = null;
+      }
+
+      hideAllScreens();
+      document.getElementById("homeScreen").classList.remove("hidden");
+      await renderHome();
+    }
+
+    // Enter key adds item
+    document.getElementById("editItemInput").addEventListener("keydown", function(e) {
+      if (e.key === "Enter") addItem();
+    });
+
+    // Start
+
+    // ===== RESET ONCE (TEMPORARY) =====
+    
+
+// Start
+  // ===== RESET ONCE (TEMPORARY) =====
+   
+
+// Start
+    renderHome();
+
+
+	
+  </script>
+
+</body>
+</html>
