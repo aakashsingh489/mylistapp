@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>4 Lists App</title>
+  <title>LetsWatch</title>
 
   <style>
     body {
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
-
       background-image: url("bg.jpg");
       background-size: cover;
       background-position: center;
@@ -236,9 +235,7 @@
   <!-- HOME SCREEN -->
   <div class="container" id="homeScreen">
     <h1>LetsWatch</h1>
-
     <div class="hint">👇 Click any specific list to watch all the names</div>
-
     <div class="grid" id="homeGrid"></div>
 
     <div class="bottom-bar">
@@ -272,7 +269,6 @@
   <!-- VIEW SCREEN -->
   <div class="container hidden list-screen" id="viewScreen">
     <h2 class="screen-title" id="viewTitle">Viewing</h2>
-
     <ul class="main-list" id="viewList"></ul>
 
     <div class="bottom-bar">
@@ -285,6 +281,7 @@
   <!-- Hidden file input for gallery -->
   <input id="bgFileInput" type="file" accept="image/*" class="hidden" />
 
+  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
@@ -294,7 +291,15 @@
     const SUPABASE_URL = "https://qbjpzbxyqxiylusqkppi.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFianB6Ynh5cXhpeWx1c3FrcHBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTQzNTQsImV4cCI6MjA4Njg3MDM1NH0.W85MlPKyJrsAF1N3ej6Kp_KYcPhs8JdblBaBHL-LIrg";
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // IMPORTANT:
+    // If you get "supabase already declared", it means your script is included twice.
+    // This file should contain only ONE supabase client.
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // ==========================
+    // IMPORTANT: EDIT SECRET
+    // ==========================
+    const EDIT_SECRET = "Aakash@1234";
 
     // ==========================
     // LIST NAMES
@@ -313,7 +318,6 @@
     // ==========================
     let currentListKey = null;
 
-    // list data from Supabase
     let lists = {
       buggy: [],
       zainab: [],
@@ -325,19 +329,21 @@
     // SUPABASE LIST FUNCTIONS
     // ==========================
     async function loadAllListsFromSupabase() {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from("lists")
         .select("list_key, items");
 
       if (error) {
-        console.error(error);
-        alert("Failed to load lists from Supabase ❌");
+        console.error("Supabase load error:", error);
+        alert("Supabase error while loading lists ❌\n\n" + error.message);
         return;
       }
 
+      // reset
       for (const k of listKeys) lists[k] = [];
 
-      for (const row of data) {
+      // fill
+      for (const row of data || []) {
         if (lists[row.list_key] !== undefined) {
           lists[row.list_key] = row.items || [];
         }
@@ -345,49 +351,15 @@
     }
 
     async function saveOneListToSupabase(listKey) {
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from("lists")
         .update({ items: lists[listKey] })
         .eq("list_key", listKey);
 
       if (error) {
-        console.error(error);
-        alert("Failed to save list online ❌");
+        console.error("Supabase save error:", error);
+        alert("Failed to save list online ❌\n\n" + error.message);
       }
-    }
-
-    // ==========================
-    // PASSWORDS (PER LIST) - SUPABASE
-    // ==========================
-    async function getListPassword(listKey) {
-      const { data, error } = await supabase
-        .from("list_passwords")
-        .select("password")
-        .eq("list_key", listKey)
-        .single();
-
-      if (error) {
-        return null;
-      }
-
-      return data?.password || null;
-    }
-
-    async function setListPassword(listKey, newPassword) {
-      const { error } = await supabase
-        .from("list_passwords")
-        .upsert({
-          list_key: listKey,
-          password: newPassword
-        });
-
-      if (error) {
-        console.error(error);
-        alert("Failed to save password ❌");
-        return false;
-      }
-
-      return true;
     }
 
     // ==========================
@@ -400,7 +372,7 @@
     async function uploadBackgroundToSupabase(listKey, file) {
       const path = getBgPath(listKey);
 
-      const { error } = await supabase.storage
+      const { error } = await supabaseClient.storage
         .from("list-backgrounds")
         .upload(path, file, {
           upsert: true,
@@ -408,8 +380,8 @@
         });
 
       if (error) {
-        console.error(error);
-        alert("Failed to upload background ❌");
+        console.error("Upload error:", error);
+        alert("Failed to upload background ❌\n\n" + error.message);
         return false;
       }
 
@@ -419,27 +391,27 @@
     async function deleteBackgroundFromSupabase(listKey) {
       const path = getBgPath(listKey);
 
-      const { error } = await supabase.storage
+      const { error } = await supabaseClient.storage
         .from("list-backgrounds")
         .remove([path]);
 
       if (error) {
-        console.error(error);
-        alert("Failed to remove background ❌");
+        console.error("Remove error:", error);
+        alert("Failed to remove background ❌\n\n" + error.message);
         return false;
       }
 
       return true;
     }
 
-    async function getBackgroundPublicUrl(listKey) {
+    function getBackgroundPublicUrl(listKey) {
       const path = getBgPath(listKey);
 
-      const { data } = supabase.storage
+      const { data } = supabaseClient.storage
         .from("list-backgrounds")
         .getPublicUrl(path);
 
-      return data.publicUrl || null;
+      return data?.publicUrl || null;
     }
 
     // ==========================
@@ -452,7 +424,7 @@
     }
 
     async function applyListScreenBackground(key) {
-      const url = await getBackgroundPublicUrl(key);
+      const url = getBackgroundPublicUrl(key);
 
       const viewScreen = document.getElementById("viewScreen");
       const editScreen = document.getElementById("editScreen");
@@ -463,10 +435,11 @@
         return;
       }
 
+      // test load
       const img = new Image();
       img.onload = () => {
-        viewScreen.style.backgroundImage = `url('${url}')`;
-        editScreen.style.backgroundImage = `url('${url}')`;
+        viewScreen.style.backgroundImage = `url('${url}?t=${Date.now()}')`;
+        editScreen.style.backgroundImage = `url('${url}?t=${Date.now()}')`;
       };
       img.onerror = () => {
         viewScreen.style.backgroundImage = "";
@@ -490,11 +463,13 @@
         const items = lists[key] || [];
         const preview = items.slice(0, 5);
 
-        const bgUrl = await getBackgroundPublicUrl(key);
+        const bgUrl = getBackgroundPublicUrl(key);
 
         card.innerHTML = `
           ${bgUrl ? `<div class="card-bg" style="background-image:url('${bgUrl}?t=${Date.now()}')"></div>` : ""}
+
           <h2>${listDisplayNames[key]}</h2>
+          <p style="margin:0 0 10px;color:#777;font-size:13px;">🔒 Edit protected</p>
 
           ${
             items.length === 0
@@ -514,7 +489,7 @@
     // ==========================
     // EDIT MENU
     // ==========================
-    async function openEditMenu() {
+    function openEditMenu() {
       let name = prompt("Which list to edit?\nBuggy, Zainab, Parth, Aakash");
       if (!name) return;
 
@@ -526,7 +501,7 @@
         return;
       }
 
-      await handlePasswordThenOpenEdit(key);
+      handlePasswordThenOpenEdit(key);
     }
 
     function getKeyFromName(nameLower) {
@@ -539,33 +514,13 @@
     // ==========================
     // PASSWORD ONLY FOR EDIT
     // ==========================
-    async function handlePasswordThenOpenEdit(key) {
-      const savedPassword = await getListPassword(key);
-
-      if (!savedPassword) {
-        let newPass = prompt(
-          "First time editing " + listDisplayNames[key] + ".\n\nSet a password:"
-        );
-
-        if (!newPass) return;
-        newPass = newPass.trim();
-
-        if (newPass === "") return;
-
-        const ok = await setListPassword(key, newPass);
-        if (!ok) return;
-
-        alert("Password set successfully ✅");
-        openEdit(key);
-        return;
-      }
-
-      let entered = prompt("Enter password to edit " + listDisplayNames[key] + ":");
+    function handlePasswordThenOpenEdit(key) {
+      let entered = prompt("Enter secret password to edit " + listDisplayNames[key] + ":");
       if (!entered) return;
 
       entered = entered.trim();
 
-      if (entered !== savedPassword) {
+      if (entered !== EDIT_SECRET) {
         alert("Wrong password ❌");
         return;
       }
@@ -706,6 +661,73 @@
     // ==========================
     async function goHome() {
       currentListKey = null;
+      hideAllScreens();
+      document.getElementById("homeScreen").classList.remove("hidden");
+      await renderHome();
+    }
+
+    // Enter key adds item
+    document.getElementById("editItemInput").addEventListener("keydown", function(e) {
+      if (e.key === "Enter") addItem();
+    });
+
+    // ==========================
+    // START APP
+    // ==========================
+    (async () => {
+      console.log("App starting...");
+      await loadAllListsFromSupabase();
+      await renderHome();
+      console.log("App loaded!");
+    })();
+  </script>
+
+</body>
+</html>
+
+
+    // ==========================
+    // BACKGROUND: GALLERY PICKER
+    // ==========================
+    function chooseBackgroundFromGallery() {
+      const fileInput = document.getElementById("bgFileInput");
+      fileInput.value = "";
+      fileInput.click();
+    }
+
+    document.getElementById("bgFileInput").addEventListener("change", async function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        alert("Please select an image file.");
+        return;
+      }
+
+      const ok = await uploadBackgroundToSupabase(currentListKey, file);
+      if (!ok) return;
+
+      await applyListScreenBackground(currentListKey);
+      await renderHome();
+      alert("Background updated ✅");
+    });
+
+    async function removeListBackground() {
+      if (!confirm("Remove background for " + listDisplayNames[currentListKey] + "?")) return;
+
+      const ok = await deleteBackgroundFromSupabase(currentListKey);
+      if (!ok) return;
+
+      await applyListScreenBackground(currentListKey);
+      await renderHome();
+      alert("Background removed ✅");
+    }
+
+    // ==========================
+    // HOME
+    // ==========================
+    async function goHome() {
+      currentListKey = null;
 
       hideAllScreens();
       document.getElementById("homeScreen").classList.remove("hidden");
@@ -727,6 +749,7 @@
 
 </body>
 </html>
+
 
 
 
