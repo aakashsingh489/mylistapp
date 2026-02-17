@@ -295,11 +295,45 @@
     // If you get "supabase already declared", it means your script is included twice.
     // This file should contain only ONE supabase client.
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // ==========================
+// PASSWORDS (PER LIST) - SUPABASE
+// ==========================
+
+async function getListPassword(listKey) {
+  const { data, error } = await supabase
+    .from("list_passwords")
+    .select("password")
+    .eq("list_key", listKey)
+    .single();
+
+  // If row doesn't exist yet, treat as no password
+  if (error) {
+    return null;
+  }
+
+  return data?.password || null;
+}
+
+async function setListPassword(listKey, newPassword) {
+  const { error } = await supabase
+    .from("list_passwords")
+    .upsert({
+      list_key: listKey,
+      password: newPassword
+    });
+
+  if (error) {
+    console.error(error);
+    alert("Failed to save password ❌");
+    return false;
+  }
+
+  return true;
+}
 
     // ==========================
     // IMPORTANT: EDIT SECRET
     // ==========================
-    const EDIT_SECRET = "Aakash@1234";
 
     // ==========================
     // LIST NAMES
@@ -514,19 +548,46 @@
     // ==========================
     // PASSWORD ONLY FOR EDIT
     // ==========================
-    function handlePasswordThenOpenEdit(key) {
-      let entered = prompt("Enter secret password to edit " + listDisplayNames[key] + ":");
-      if (!entered) return;
+    async function handlePasswordThenOpenEdit(key) {
+  const savedPassword = await getListPassword(key);
 
-      entered = entered.trim();
+  // If password not set yet, ask user to create it
+  if (!savedPassword) {
+    let newPass = prompt(
+      "No password is set for " + listDisplayNames[key] + ".\n\nCreate a new password now:"
+    );
 
-      if (entered !== EDIT_SECRET) {
-        alert("Wrong password ❌");
-        return;
-      }
+    if (!newPass) return;
+    newPass = newPass.trim();
 
-      openEdit(key);
+    if (newPass.length < 3) {
+      alert("Password too short ❌ (minimum 3 characters)");
+      return;
     }
+
+    const ok = await setListPassword(key, newPass);
+    if (!ok) return;
+
+    alert("Password set successfully ✅\nNow you can edit this list.");
+
+    openEdit(key);
+    return;
+  }
+
+  // If password already exists, ask user to enter it
+  let entered = prompt("Enter password to edit " + listDisplayNames[key] + ":");
+  if (!entered) return;
+
+  entered = entered.trim();
+
+  if (entered !== savedPassword) {
+    alert("Wrong password ❌");
+    return;
+  }
+
+  openEdit(key);
+}
+
 
     // ==========================
     // OPEN SCREENS
@@ -749,6 +810,7 @@
 
 </body>
 </html>
+
 
 
 
