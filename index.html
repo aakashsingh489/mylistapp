@@ -246,7 +246,7 @@
     </div>
 
     <div class="hint">🔒 Password is only required for Edit</div>
-    <div class="hint"> Everythingh is created by the one and only 'Aakash'</div>
+    <div class="hint">Everything is created by the one and only 'Aakash'</div>
   </div>
 
   <!-- EDIT SCREEN -->
@@ -284,136 +284,145 @@
 
   <!-- Hidden file input for gallery -->
   <input id="bgFileInput" type="file" accept="image/*" class="hidden" />
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
-	  
+    // ==========================
+    // SUPABASE CONFIG
     // ==========================
     const SUPABASE_URL = "https://qbjpzbxyqxiylusqkppi.supabase.co";
-	const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFianB6Ynh5cXhpeWx1c3FrcHBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTQzNTQsImV4cCI6MjA4Njg3MDM1NH0.W85MlPKyJrsAF1N3ej6Kp_KYcPhs8JdblBaBHL-LIrg";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFianB6Ynh5cXhpeWx1c3FrcHBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTQzNTQsImV4cCI6MjA4Njg3MDM1NH0.W85MlPKyJrsAF1N3ej6Kp_KYcPhs8JdblBaBHL-LIrg";
 
-	const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-// LIST NAMES
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     // ==========================
-    const listKeys = ["x1", "x2", "x3", "x4"];
+    // IMPORTANT: EDIT SECRET
+    // ==========================
+    // Change this to something only YOU know.
+    // Anyone who knows this can edit your lists.
+    const EDIT_SECRET = "Aakash@1234";
+
+    // ==========================
+    // LIST NAMES
+    // ==========================
+    const listKeys = ["buggy", "zainab", "parth", "aakash"];
 
     const listDisplayNames = {
-      x1: "Buggy",
-      x2: "Zainab",
-      x3: "Parth",
-      x4: "Aakash"
+      buggy: "Buggy",
+      zainab: "Zainab",
+      parth: "Parth",
+      aakash: "Aakash"
     };
-
-    // ==========================
-    // DEFAULT ITEMS
-    // ==========================
-    const defaultData = {
-      x1: [],
-      x2: [],
-      x3: [],
-      x4: []
-    };
-
-    // ==========================
-    // LOCAL STORAGE (lists + passwords)
-    // ==========================
-    let lists = JSON.parse(localStorage.getItem("fourListsData"));
-    if (!lists) {
-      lists = defaultData;
-      saveAll();
-    }
-
-    let passwords = JSON.parse(localStorage.getItem("fourListsPasswords"));
-    if (!passwords) {
-      passwords = {};
-      savePasswords();
-    }
-
-    function saveAll() {
-      localStorage.setItem("fourListsData", JSON.stringify(lists));
-    }
-
-    function savePasswords() {
-      localStorage.setItem("fourListsPasswords", JSON.stringify(passwords));
-    }
-
-    // ==========================
-    // INDEXED DB (background images)
-    // ==========================
-    const DB_NAME = "FourListsDB";
-    const DB_VERSION = 1;
-    const STORE_NAME = "backgrounds";
-
-    function openDB() {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-        request.onupgradeneeded = function(event) {
-          const db = event.target.result;
-          if (!db.objectStoreNames.contains(STORE_NAME)) {
-            db.createObjectStore(STORE_NAME);
-          }
-        };
-
-        request.onsuccess = function() {
-          resolve(request.result);
-        };
-
-        request.onerror = function() {
-          reject("IndexedDB error");
-        };
-      });
-    }
-
-    async function setBackgroundBlob(listKey, blob) {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, "readwrite");
-        const store = tx.objectStore(STORE_NAME);
-
-        const req = store.put(blob, listKey);
-
-        req.onsuccess = () => resolve(true);
-        req.onerror = () => reject("Failed saving background");
-      });
-    }
-
-    async function getBackgroundBlob(listKey) {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, "readonly");
-        const store = tx.objectStore(STORE_NAME);
-
-        const req = store.get(listKey);
-
-        req.onsuccess = () => resolve(req.result || null);
-        req.onerror = () => reject("Failed reading background");
-      });
-    }
-
-    async function removeBackgroundBlob(listKey) {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, "readwrite");
-        const store = tx.objectStore(STORE_NAME);
-
-        const req = store.delete(listKey);
-
-        req.onsuccess = () => resolve(true);
-        req.onerror = () => reject("Failed deleting background");
-      });
-    }
-
-    function blobToURL(blob) {
-      return URL.createObjectURL(blob);
-    }
 
     // ==========================
     // APP STATE
     // ==========================
     let currentListKey = null;
+
+    // list data from Supabase
+    let lists = {
+      buggy: [],
+      zainab: [],
+      parth: [],
+      aakash: []
+    };
+
+    // background url cache
     let currentBgObjectURL = null;
 
+    // ==========================
+    // SUPABASE LIST FUNCTIONS
+    // ==========================
+    async function loadAllListsFromSupabase() {
+      const { data, error } = await supabase
+        .from("lists")
+        .select("list_key, items");
+
+      if (error) {
+        console.error(error);
+        alert("Failed to load lists from Supabase ❌");
+        return;
+      }
+
+      // reset
+      for (const k of listKeys) lists[k] = [];
+
+      // fill
+      for (const row of data) {
+        if (lists[row.list_key] !== undefined) {
+          lists[row.list_key] = row.items || [];
+        }
+      }
+    }
+
+    async function saveOneListToSupabase(listKey) {
+      const { error } = await supabase
+        .from("lists")
+        .update({ items: lists[listKey] })
+        .eq("list_key", listKey);
+
+      if (error) {
+        console.error(error);
+        alert("Failed to save list online ❌");
+      }
+    }
+
+    // ==========================
+    // SUPABASE STORAGE BACKGROUNDS
+    // ==========================
+    function getBgPath(listKey) {
+      return `${listKey}.jpg`;
+    }
+
+    async function uploadBackgroundToSupabase(listKey, file) {
+      const path = getBgPath(listKey);
+
+      const { error } = await supabase.storage
+        .from("list-backgrounds")
+        .upload(path, file, {
+          upsert: true,
+          contentType: file.type
+        });
+
+      if (error) {
+        console.error(error);
+        alert("Failed to upload background ❌");
+        return false;
+      }
+
+      return true;
+    }
+
+    async function deleteBackgroundFromSupabase(listKey) {
+      const path = getBgPath(listKey);
+
+      const { error } = await supabase.storage
+        .from("list-backgrounds")
+        .remove([path]);
+
+      if (error) {
+        console.error(error);
+        alert("Failed to remove background ❌");
+        return false;
+      }
+
+      return true;
+    }
+
+    async function getBackgroundPublicUrl(listKey) {
+      const path = getBgPath(listKey);
+
+      const { data } = supabase.storage
+        .from("list-backgrounds")
+        .getPublicUrl(path);
+
+      return data.publicUrl || null;
+    }
+
+    // ==========================
+    // UI HELPERS
+    // ==========================
     function hideAllScreens() {
       document.getElementById("homeScreen").classList.add("hidden");
       document.getElementById("editScreen").classList.add("hidden");
@@ -421,25 +430,35 @@
     }
 
     async function applyListScreenBackground(key) {
-      // Cleanup old object URL
+      // cleanup old object url
       if (currentBgObjectURL) {
         URL.revokeObjectURL(currentBgObjectURL);
         currentBgObjectURL = null;
       }
 
-      const blob = await getBackgroundBlob(key);
+      const url = await getBackgroundPublicUrl(key);
 
       const viewScreen = document.getElementById("viewScreen");
       const editScreen = document.getElementById("editScreen");
 
-      if (blob) {
-        currentBgObjectURL = blobToURL(blob);
-        viewScreen.style.backgroundImage = `url('${currentBgObjectURL}')`;
-        editScreen.style.backgroundImage = `url('${currentBgObjectURL}')`;
-      } else {
+      // If file doesn't exist, Supabase still gives a URL, but image will 404.
+      // So we test it by trying to load it.
+      if (!url) {
         viewScreen.style.backgroundImage = "";
         editScreen.style.backgroundImage = "";
+        return;
       }
+
+      const img = new Image();
+      img.onload = () => {
+        viewScreen.style.backgroundImage = `url('${url}')`;
+        editScreen.style.backgroundImage = `url('${url}')`;
+      };
+      img.onerror = () => {
+        viewScreen.style.backgroundImage = "";
+        editScreen.style.backgroundImage = "";
+      };
+      img.src = url + "?t=" + Date.now(); // cache-buster
     }
 
     // ==========================
@@ -457,22 +476,14 @@
         const items = lists[key] || [];
         const preview = items.slice(0, 5);
 
-        const passStatus = passwords[key] ? "🔒 Edit password set" : "🔓 No edit password yet";
-
-        // Card background preview (from IndexedDB)
-        let bgBlob = null;
-        try {
-          bgBlob = await getBackgroundBlob(key);
-        } catch (e) {}
-
-        let bgURL = null;
-        if (bgBlob) bgURL = blobToURL(bgBlob);
+        // background preview
+        const bgUrl = await getBackgroundPublicUrl(key);
 
         card.innerHTML = `
-          ${bgURL ? `<div class="card-bg" style="background-image:url('${bgURL}')"></div>` : ""}
+          ${bgUrl ? `<div class="card-bg" style="background-image:url('${bgUrl}?t=${Date.now()}')"></div>` : ""}
 
           <h2>${listDisplayNames[key]}</h2>
-          <p style="margin:0 0 10px;color:#777;font-size:13px;">${passStatus}</p>
+          <p style="margin:0 0 10px;color:#777;font-size:13px;">🔒 Edit protected</p>
 
           ${
             items.length === 0
@@ -486,11 +497,6 @@
         `;
 
         grid.appendChild(card);
-
-        // cleanup card URL to avoid memory leak
-        if (bgURL) {
-          setTimeout(() => URL.revokeObjectURL(bgURL), 1000);
-        }
       }
     }
 
@@ -523,27 +529,12 @@
     // PASSWORD ONLY FOR EDIT
     // ==========================
     function handlePasswordThenOpenEdit(key) {
-      if (!passwords[key]) {
-        let newPass = prompt("First time editing " + listDisplayNames[key] + ".\nSet a password:");
-        if (!newPass) return;
-
-        newPass = newPass.trim();
-        if (newPass === "") return;
-
-        passwords[key] = newPass;
-        savePasswords();
-
-        alert("Password set successfully for " + listDisplayNames[key] + " ✅");
-        openEdit(key);
-        return;
-      }
-
-      let entered = prompt("Enter password to edit " + listDisplayNames[key] + ":");
+      let entered = prompt("Enter secret password to edit " + listDisplayNames[key] + ":");
       if (!entered) return;
 
       entered = entered.trim();
 
-      if (entered !== passwords[key]) {
+      if (entered !== EDIT_SECRET) {
         alert("Wrong password ❌");
         return;
       }
@@ -618,24 +609,28 @@
     // ==========================
     // ADD / DELETE
     // ==========================
-    function addItem() {
+    async function addItem() {
       const input = document.getElementById("editItemInput");
       const value = input.value.trim();
       if (value === "") return;
 
       if (!lists[currentListKey]) lists[currentListKey] = [];
       lists[currentListKey].push(value);
-      saveAll();
 
       input.value = "";
       input.focus();
       renderEdit();
+
+      await saveOneListToSupabase(currentListKey);
+      await renderHome();
     }
 
-    function deleteItem(index) {
+    async function deleteItem(index) {
       lists[currentListKey].splice(index, 1);
-      saveAll();
       renderEdit();
+
+      await saveOneListToSupabase(currentListKey);
+      await renderHome();
     }
 
     // ==========================
@@ -656,27 +651,23 @@
         return;
       }
 
-      try {
-        await setBackgroundBlob(currentListKey, file);
-        await applyListScreenBackground(currentListKey);
-        await renderHome();
-        alert("Background updated ✅");
-      } catch (err) {
-        alert("Failed to save background ❌");
-      }
+      const ok = await uploadBackgroundToSupabase(currentListKey, file);
+      if (!ok) return;
+
+      await applyListScreenBackground(currentListKey);
+      await renderHome();
+      alert("Background updated ✅");
     });
 
     async function removeListBackground() {
       if (!confirm("Remove background for " + listDisplayNames[currentListKey] + "?")) return;
 
-      try {
-        await removeBackgroundBlob(currentListKey);
-        await applyListScreenBackground(currentListKey);
-        await renderHome();
-        alert("Background removed ✅");
-      } catch (err) {
-        alert("Failed to remove background ❌");
-      }
+      const ok = await deleteBackgroundFromSupabase(currentListKey);
+      if (!ok) return;
+
+      await applyListScreenBackground(currentListKey);
+      await renderHome();
+      alert("Background removed ✅");
     }
 
     // ==========================
@@ -685,7 +676,6 @@
     async function goHome() {
       currentListKey = null;
 
-      // cleanup background URL
       if (currentBgObjectURL) {
         URL.revokeObjectURL(currentBgObjectURL);
         currentBgObjectURL = null;
@@ -701,22 +691,16 @@
       if (e.key === "Enter") addItem();
     });
 
-    // Start
-
-    // ===== RESET ONCE (TEMPORARY) =====
-    
-
-// Start
-  // ===== RESET ONCE (TEMPORARY) =====
-   
-
-// Start
-    renderHome();
-
-
-	
+    // ==========================
+    // START APP
+    // ==========================
+    (async () => {
+      await loadAllListsFromSupabase();
+      await renderHome();
+    })();
   </script>
 
 </body>
 </html>
+
 
