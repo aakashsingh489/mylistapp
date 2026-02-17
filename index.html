@@ -284,10 +284,16 @@
 
   <!-- Hidden file input for gallery -->
   <input id="bgFileInput" type="file" accept="image/*" class="hidden" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
+	  
     // ==========================
-    // LIST NAMES
+    const SUPABASE_URL = "https://qbjpzbxyqxiylusqkppi.supabase.co";
+	const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFianB6Ynh5cXhpeWx1c3FrcHBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTQzNTQsImV4cCI6MjA4Njg3MDM1NH0.W85MlPKyJrsAF1N3ej6Kp_KYcPhs8JdblBaBHL-LIrg";
+
+	const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// LIST NAMES
     // ==========================
     const listKeys = ["x1", "x2", "x3", "x4"];
 
@@ -713,3 +719,4 @@
 
 </body>
 </html>
+
