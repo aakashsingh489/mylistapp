@@ -200,7 +200,6 @@
       margin-top: 10px;
     }
 
-    /* LIST SCREEN BACKGROUND */
     .list-screen {
       background-size: cover;
       background-position: center;
@@ -223,9 +222,7 @@
     }
 
     @media (max-width: 620px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
+      .grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -235,15 +232,15 @@
   <!-- HOME SCREEN -->
   <div class="container" id="homeScreen">
     <h1>LetsWatch</h1>
-    <div class="hint">👇 Click any specific list to watch all the names</div>
+    <div class="hint">👇 Click any list to view it</div>
+
     <div class="grid" id="homeGrid"></div>
 
     <div class="bottom-bar">
       <button onclick="openEditMenu()">Edit</button>
     </div>
 
-    <div class="hint">🔒 Password is only required for Edit</div>
-    <div class="hint">Everything is created by the one and only 'Aakash'</div>
+    <div class="hint">🔒 Password required only for Edit</div>
   </div>
 
   <!-- EDIT SCREEN -->
@@ -278,10 +275,9 @@
     <div class="hint">👀 View only mode</div>
   </div>
 
-  <!-- Hidden file input for gallery -->
+  <!-- Hidden file input -->
   <input id="bgFileInput" type="file" accept="image/*" class="hidden" />
 
-  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
@@ -291,49 +287,14 @@
     const SUPABASE_URL = "https://qbjpzbxyqxiylusqkppi.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFianB6Ynh5cXhpeWx1c3FrcHBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTQzNTQsImV4cCI6MjA4Njg3MDM1NH0.W85MlPKyJrsAF1N3ej6Kp_KYcPhs8JdblBaBHL-LIrg";
 
-    // IMPORTANT:
-    // If you get "supabase already declared", it means your script is included twice.
-    // This file should contain only ONE supabase client.
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    // ==========================
-// PASSWORDS (PER LIST) - SUPABASE
-// ==========================
-
-async function getListPassword(listKey) {
-  const { data, error } = await supabase
-    .from("list_passwords")
-    .select("password")
-    .eq("list_key", listKey)
-    .single();
-
-  // If row doesn't exist yet, treat as no password
-  if (error) {
-    return null;
-  }
-
-  return data?.password || null;
-}
-
-async function setListPassword(listKey, newPassword) {
-  const { error } = await supabase
-    .from("list_passwords")
-    .upsert({
-      list_key: listKey,
-      password: newPassword
-    });
-
-  if (error) {
-    console.error(error);
-    alert("Failed to save password ❌");
-    return false;
-  }
-
-  return true;
-}
 
     // ==========================
-    // IMPORTANT: EDIT SECRET
+    // TABLE NAMES (IMPORTANT)
     // ==========================
+    // Change these if your table names are different
+    const LISTS_TABLE = "lists";
+    const PASSWORDS_TABLE = "list_passwords";
 
     // ==========================
     // LIST NAMES
@@ -360,23 +321,50 @@ async function setListPassword(listKey, newPassword) {
     };
 
     // ==========================
-    // SUPABASE LIST FUNCTIONS
+    // PASSWORDS (PER LIST)
+    // ==========================
+    async function getListPassword(listKey) {
+      const { data, error } = await supabaseClient
+        .from(PASSWORDS_TABLE)
+        .select("password")
+        .eq("list_key", listKey)
+        .single();
+
+      // if no row yet, treat as no password
+      if (error) return null;
+
+      return data?.password || null;
+    }
+
+    async function setListPassword(listKey, newPassword) {
+      const { error } = await supabaseClient
+        .from(PASSWORDS_TABLE)
+        .upsert({ list_key: listKey, password: newPassword });
+
+      if (error) {
+        console.error(error);
+        alert("Failed to save password ❌\n\n" + error.message);
+        return false;
+      }
+      return true;
+    }
+
+    // ==========================
+    // LIST LOAD/SAVE
     // ==========================
     async function loadAllListsFromSupabase() {
       const { data, error } = await supabaseClient
-        .from("lists")
+        .from(LISTS_TABLE)
         .select("list_key, items");
 
       if (error) {
-        console.error("Supabase load error:", error);
-        alert("Supabase error while loading lists ❌\n\n" + error.message);
+        console.error(error);
+        alert("Failed to load lists ❌\n\n" + error.message);
         return;
       }
 
-      // reset
       for (const k of listKeys) lists[k] = [];
 
-      // fill
       for (const row of data || []) {
         if (lists[row.list_key] !== undefined) {
           lists[row.list_key] = row.items || [];
@@ -386,18 +374,18 @@ async function setListPassword(listKey, newPassword) {
 
     async function saveOneListToSupabase(listKey) {
       const { error } = await supabaseClient
-        .from("lists")
+        .from(LISTS_TABLE)
         .update({ items: lists[listKey] })
         .eq("list_key", listKey);
 
       if (error) {
-        console.error("Supabase save error:", error);
-        alert("Failed to save list online ❌\n\n" + error.message);
+        console.error(error);
+        alert("Failed to save list ❌\n\n" + error.message);
       }
     }
 
     // ==========================
-    // SUPABASE STORAGE BACKGROUNDS
+    // STORAGE BACKGROUNDS
     // ==========================
     function getBgPath(listKey) {
       return `${listKey}.jpg`;
@@ -408,17 +396,13 @@ async function setListPassword(listKey, newPassword) {
 
       const { error } = await supabaseClient.storage
         .from("list-backgrounds")
-        .upload(path, file, {
-          upsert: true,
-          contentType: file.type
-        });
+        .upload(path, file, { upsert: true, contentType: file.type });
 
       if (error) {
-        console.error("Upload error:", error);
+        console.error(error);
         alert("Failed to upload background ❌\n\n" + error.message);
         return false;
       }
-
       return true;
     }
 
@@ -430,26 +414,21 @@ async function setListPassword(listKey, newPassword) {
         .remove([path]);
 
       if (error) {
-        console.error("Remove error:", error);
+        console.error(error);
         alert("Failed to remove background ❌\n\n" + error.message);
         return false;
       }
-
       return true;
     }
 
     function getBackgroundPublicUrl(listKey) {
       const path = getBgPath(listKey);
-
-      const { data } = supabaseClient.storage
-        .from("list-backgrounds")
-        .getPublicUrl(path);
-
+      const { data } = supabaseClient.storage.from("list-backgrounds").getPublicUrl(path);
       return data?.publicUrl || null;
     }
 
     // ==========================
-    // UI HELPERS
+    // UI
     // ==========================
     function hideAllScreens() {
       document.getElementById("homeScreen").classList.add("hidden");
@@ -469,7 +448,6 @@ async function setListPassword(listKey, newPassword) {
         return;
       }
 
-      // test load
       const img = new Image();
       img.onload = () => {
         viewScreen.style.backgroundImage = `url('${url}?t=${Date.now()}')`;
@@ -482,9 +460,6 @@ async function setListPassword(listKey, newPassword) {
       img.src = url + "?t=" + Date.now();
     }
 
-    // ==========================
-    // HOME RENDER
-    // ==========================
     async function renderHome() {
       const grid = document.getElementById("homeGrid");
       grid.innerHTML = "";
@@ -496,46 +471,22 @@ async function setListPassword(listKey, newPassword) {
 
         const items = lists[key] || [];
         const preview = items.slice(0, 5);
-
         const bgUrl = getBackgroundPublicUrl(key);
 
         card.innerHTML = `
           ${bgUrl ? `<div class="card-bg" style="background-image:url('${bgUrl}?t=${Date.now()}')"></div>` : ""}
-
           <h2>${listDisplayNames[key]}</h2>
-          <p style="margin:0 0 10px;color:#777;font-size:13px;">🔒 Edit protected</p>
-
           ${
             items.length === 0
               ? `<p style="color:#777;font-size:14px;margin:0;">(empty)</p>`
               : `<ul class="small-list">
                   ${preview.map(i => `<li>${i}</li>`).join("")}
-                </ul>
-                ${items.length > 5 ? `<p style="margin:8px 0 0;color:#777;font-size:13px;">+ more...</p>` : ""}
-               `
+                </ul>`
           }
         `;
 
         grid.appendChild(card);
       }
-    }
-
-    // ==========================
-    // EDIT MENU
-    // ==========================
-    function openEditMenu() {
-      let name = prompt("Which list to edit?\nBuggy, Zainab, Parth, Aakash");
-      if (!name) return;
-
-      name = name.trim().toLowerCase();
-
-      const key = getKeyFromName(name);
-      if (!key) {
-        alert("Invalid name! Type: Buggy, Zainab, Parth, or Aakash");
-        return;
-      }
-
-      handlePasswordThenOpenEdit(key);
     }
 
     function getKeyFromName(nameLower) {
@@ -546,48 +497,54 @@ async function setListPassword(listKey, newPassword) {
     }
 
     // ==========================
-    // PASSWORD ONLY FOR EDIT
+    // EDIT MENU
     // ==========================
-    async function handlePasswordThenOpenEdit(key) {
-  const savedPassword = await getListPassword(key);
+    async function openEditMenu() {
+      let name = prompt("Which list to edit?\nBuggy, Zainab, Parth, Aakash");
+      if (!name) return;
 
-  // If password not set yet, ask user to create it
-  if (!savedPassword) {
-    let newPass = prompt(
-      "No password is set for " + listDisplayNames[key] + ".\n\nCreate a new password now:"
-    );
+      name = name.trim().toLowerCase();
+      const key = getKeyFromName(name);
 
-    if (!newPass) return;
-    newPass = newPass.trim();
+      if (!key) {
+        alert("Invalid name!");
+        return;
+      }
 
-    if (newPass.length < 3) {
-      alert("Password too short ❌ (minimum 3 characters)");
-      return;
+      await handlePasswordThenOpenEdit(key);
     }
 
-    const ok = await setListPassword(key, newPass);
-    if (!ok) return;
+    async function handlePasswordThenOpenEdit(key) {
+      const savedPassword = await getListPassword(key);
 
-    alert("Password set successfully ✅\nNow you can edit this list.");
+      // first time: set password
+      if (!savedPassword) {
+        let newPass = prompt("No password set for " + listDisplayNames[key] + ".\n\nCreate a password:");
+        if (!newPass) return;
 
-    openEdit(key);
-    return;
-  }
+        newPass = newPass.trim();
+        if (newPass.length < 1) return;
 
-  // If password already exists, ask user to enter it
-  let entered = prompt("Enter password to edit " + listDisplayNames[key] + ":");
-  if (!entered) return;
+        const ok = await setListPassword(key, newPass);
+        if (!ok) return;
 
-  entered = entered.trim();
+        alert("Password set ✅");
+        openEdit(key);
+        return;
+      }
 
-  if (entered !== savedPassword) {
-    alert("Wrong password ❌");
-    return;
-  }
+      // normal: enter password
+      let entered = prompt("Enter password to edit " + listDisplayNames[key] + ":");
+      if (!entered) return;
 
-  openEdit(key);
-}
+      entered = entered.trim();
+      if (entered !== savedPassword) {
+        alert("Wrong password ❌");
+        return;
+      }
 
+      openEdit(key);
+    }
 
     // ==========================
     // OPEN SCREENS
@@ -601,7 +558,6 @@ async function setListPassword(listKey, newPassword) {
 
       document.getElementById("editTitle").innerText = "Editing " + listDisplayNames[key];
       renderEdit();
-
       document.getElementById("editItemInput").focus();
     }
 
@@ -616,9 +572,6 @@ async function setListPassword(listKey, newPassword) {
       renderView();
     }
 
-    // ==========================
-    // LIST RENDER
-    // ==========================
     function renderEdit() {
       const ul = document.getElementById("editList");
       ul.innerHTML = "";
@@ -661,7 +614,6 @@ async function setListPassword(listKey, newPassword) {
       const value = input.value.trim();
       if (value === "") return;
 
-      if (!lists[currentListKey]) lists[currentListKey] = [];
       lists[currentListKey].push(value);
 
       input.value = "";
@@ -681,22 +633,16 @@ async function setListPassword(listKey, newPassword) {
     }
 
     // ==========================
-    // BACKGROUND: GALLERY PICKER
+    // BACKGROUND PICKER
     // ==========================
     function chooseBackgroundFromGallery() {
-      const fileInput = document.getElementById("bgFileInput");
-      fileInput.value = "";
-      fileInput.click();
+      document.getElementById("bgFileInput").value = "";
+      document.getElementById("bgFileInput").click();
     }
 
     document.getElementById("bgFileInput").addEventListener("change", async function(e) {
       const file = e.target.files[0];
       if (!file) return;
-
-      if (!file.type.startsWith("image/")) {
-        alert("Please select an image file.");
-        return;
-      }
 
       const ok = await uploadBackgroundToSupabase(currentListKey, file);
       if (!ok) return;
@@ -707,8 +653,6 @@ async function setListPassword(listKey, newPassword) {
     });
 
     async function removeListBackground() {
-      if (!confirm("Remove background for " + listDisplayNames[currentListKey] + "?")) return;
-
       const ok = await deleteBackgroundFromSupabase(currentListKey);
       if (!ok) return;
 
@@ -727,76 +671,12 @@ async function setListPassword(listKey, newPassword) {
       await renderHome();
     }
 
-    // Enter key adds item
     document.getElementById("editItemInput").addEventListener("keydown", function(e) {
       if (e.key === "Enter") addItem();
     });
 
     // ==========================
-    // START APP
-    // ==========================
-    (async () => {
-      console.log("App starting...");
-      await loadAllListsFromSupabase();
-      await renderHome();
-      console.log("App loaded!");
-    })();
-
-
-    // ==========================
-    // BACKGROUND: GALLERY PICKER
-    // ==========================
-    function chooseBackgroundFromGallery() {
-      const fileInput = document.getElementById("bgFileInput");
-      fileInput.value = "";
-      fileInput.click();
-    }
-
-    document.getElementById("bgFileInput").addEventListener("change", async function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      if (!file.type.startsWith("image/")) {
-        alert("Please select an image file.");
-        return;
-      }
-
-      const ok = await uploadBackgroundToSupabase(currentListKey, file);
-      if (!ok) return;
-
-      await applyListScreenBackground(currentListKey);
-      await renderHome();
-      alert("Background updated ✅");
-    });
-
-    async function removeListBackground() {
-      if (!confirm("Remove background for " + listDisplayNames[currentListKey] + "?")) return;
-
-      const ok = await deleteBackgroundFromSupabase(currentListKey);
-      if (!ok) return;
-
-      await applyListScreenBackground(currentListKey);
-      await renderHome();
-      alert("Background removed ✅");
-    }
-
-    // ==========================
-    // HOME
-    // ==========================
-    async function goHome() {
-      currentListKey = null;
-
-      hideAllScreens();
-      document.getElementById("homeScreen").classList.remove("hidden");
-      await renderHome();
-    }
-
-    document.getElementById("editItemInput").addEventListener("keydown", function(e) {
-      if (e.key === "Enter") addItem();
-    });
-
-    // ==========================
-    // START APP
+    // START
     // ==========================
     (async () => {
       await loadAllListsFromSupabase();
@@ -806,6 +686,8 @@ async function setListPassword(listKey, newPassword) {
 
 </body>
 </html>
+
+
 
 
 
